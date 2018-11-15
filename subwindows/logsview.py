@@ -1,30 +1,37 @@
+import threading
+import time
+import traceback
+from threading import Thread
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QWidget, QScrollArea, QHBoxLayout, QFormLayout, QLabel, QLineEdit, QComboBox, QPushButton, \
     QVBoxLayout, QPlainTextEdit, QGroupBox
-import time
-from threading import Thread
+
 
 class Capturer(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.sip_container = SIPContainer()
+        self.log_manager = LogManager()
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
-        self.layout.addWidget(LogManager())
-        self.layout.addWidget(SIPContainer())
-        self.setGeometry(0, 40, 0, 0)
+        self.layout.addWidget(self.log_manager)
+        self.layout.addWidget(self.sip_container)
 
 
 class LogManager(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
-        self.layout.addWidget(Filter())
-        self.layout.addWidget(ActionArea())
+        self.filter_area = Filter()
+        self.action_area = ActionArea()
+        self.layout.addWidget(self.filter_area)
+        self.layout.addWidget(self.action_area)
 
 
 class Filter(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
 
@@ -52,32 +59,30 @@ class Filter(QWidget):
 
 
 class ActionArea(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
-        self.layout.addWidget(QPushButton("Start"))
-        self.layout.addWidget(QPushButton("Stop"))
+        self.start_btn = QPushButton("Start")
+        self.stop_btn = QPushButton("Stop")
+        self.layout.addWidget(self.start_btn)
+        self.layout.addWidget(self.stop_btn)
         self.layout.addWidget(QPushButton("Reset"))
-        #self.setLayout(self.layout)
+        # self.setLayout(self.layout)
+
 
 class SIPContainer(QScrollArea):
-    def __init__(self):
-        super().__init__()
+    save_log_signal = pyqtSignal()
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
         self.plain_logs = QPlainTextEdit()
         self.plain_logs.setReadOnly(True)
         self.plain_logs.setStyleSheet("background-color:black;color:white;border: 2px solid #ddd;")
+        self.setStyleSheet("background-color: darkgrey;outline: 1px solid slategrey;")
         self.plain_logs.setPlainText("Hello")
         self.layout.addWidget(self.plain_logs)
-        self.print_log_thread = Thread(target=self.add_text)
-        self.print_log_thread.start()
-        #self.print_log_thread.join()
 
-    def add_text(self):
-        count=0
-        while True:
-            time.sleep(1)
-            self.plain_logs.setPlainText(str(count))
-            count = count + 1
+
