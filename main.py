@@ -31,7 +31,9 @@ class Window(QMainWindow):
         self.setFixedHeight(400)
         self.setFixedWidth(640)
         self.show()
-
+        self.thread_1 = SpecThread(target=self.add_text, )
+        self.created_flag = False
+        self.main_win.log_manager.action_area.stop_btn.setDisabled(False)
         self.main_win.log_manager.action_area.start_btn.clicked.connect(self.run_thread)
         self.main_win.log_manager.action_area.stop_btn.clicked.connect(self.stop_thread)
 
@@ -45,30 +47,49 @@ class Window(QMainWindow):
 
     def run_thread(self):
         try:
-            #print(threading.List)
-            self.thread_1 = SpecThread(target=self.add_text, )
-            self.thread_1.start()
+            if not self.created_flag:
+                self.thread_1.start()
+                self.created_flag = True
+            else:
+                self.thread_1.resume()
+            self.main_win.log_manager.action_area.start_btn.setDisabled(True)
+            self.main_win.log_manager.action_area.stop_btn.setDisabled(False)
         except Exception as e:
             print(e)
             traceback.print_exc()
 
     def stop_thread(self):
-        self.thread_1.shutdown_flag.set()
+        self.main_win.log_manager.action_area.start_btn.setDisabled(False)
+        self.main_win.log_manager.action_area.stop_btn.setDisabled(True)
+        self.thread_1.pause()
 
 class SpecThread(Thread):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs={}, Verbose=None):
         Thread.__init__(self, group, target, name, args, kwargs)
-        self.shutdown_flag = threading.Event()
+        self.paused = False
         self._return = None
+        self.pause_cond = threading.Condition(threading.Lock())
 
     def run(self):
-        while not self.shutdown_flag.is_set():
-            if self._target is not None:
-                self._return = self._target(*self._args, **self._kwargs)
+        while True:
+            with self.pause_cond:
+                while self.paused:
+                    self.pause_cond.wait()
+                if self._target is not None:
+                    self._return = self._target(*self._args, **self._kwargs)
 
     def join(self, *args):
         Thread.join(self, *args)
         return self._return
+
+    def pause(self):
+        self.paused = True
+        self.pause_cond.acquire()
+
+    def resume(self):
+        self.paused = False
+        self.pause_cond.notify()
+        self.pause_cond.release()
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
