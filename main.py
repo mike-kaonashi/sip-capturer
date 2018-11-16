@@ -44,11 +44,15 @@ class Window(QMainWindow):
         self.main_win.log_manager.action_area.stop_btn.setDisabled(False)
         self.main_win.log_manager.action_area.start_btn.clicked.connect(self.run_thread)
         self.main_win.log_manager.action_area.stop_btn.clicked.connect(self.stop_thread)
+        self.main_win.log_manager.action_area.reset_btn.clicked.connect(self.reset_logs)
         save_trig.triggered.connect(self.save_file)
         exit_trig.triggered.connect(self.exit_app)
+        print(sys.platform)
 
     def exit_app(self):
+        #threading.
         self.close()
+        sys.exit()
 
     def save_file(self):
         options = QFileDialog.Options()
@@ -57,6 +61,9 @@ class Window(QMainWindow):
                                                   "All Files (*);;Text Files (*.txt)", options=options)
         if fileName:
             print(fileName)
+
+    def reset_logs(self):
+        self.main_win.sip_container.plain_logs.setPlainText('')
 
     def add_text(self):
         self.main_win.sip_container.plain_logs.appendPlainText('...\n')
@@ -111,6 +118,10 @@ class SpecThread(Thread):
         self.paused = False
         self.pause_cond.notify()
         self.pause_cond.release()
+
+    def terminate(self):
+        ...
+        #self.
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)

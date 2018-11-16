@@ -65,9 +65,10 @@ class ActionArea(QWidget):
         self.setLayout(self.layout)
         self.start_btn = QPushButton("Start")
         self.stop_btn = QPushButton("Stop")
+        self.reset_btn = QPushButton("Reset")
         self.layout.addWidget(self.start_btn)
         self.layout.addWidget(self.stop_btn)
-        self.layout.addWidget(QPushButton("Reset"))
+        self.layout.addWidget(self.reset_btn)
         # self.setLayout(self.layout)
 
 
