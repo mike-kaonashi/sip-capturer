@@ -5,8 +5,9 @@ import time
 import traceback
 from threading import Thread
 
-from PyQt5.QtGui import QTextCursor
-from PyQt5.QtWidgets import QWidget, QMainWindow, QVBoxLayout, QApplication, QStackedWidget, QScrollBar
+from PyQt5.QtGui import QTextCursor, QIcon
+from PyQt5.QtWidgets import QWidget, QMainWindow, QVBoxLayout, QApplication, \
+    QStackedWidget, QScrollBar, QAction, QFileDialog
 
 from subwindows.logsview import Capturer
 
@@ -20,6 +21,13 @@ class Window(QMainWindow):
         self.setWindowTitle(self.title)
         main_menu = self.menuBar()
         file_menu = main_menu.addMenu('File')
+        save_trig = QAction(QIcon('icon/diskette.png'), 'Save As ...', self)
+        save_trig.setShortcut('Ctrl+S')
+        exit_trig = QAction(QIcon('icon/opened-filled-door.png'), 'Exit', self)
+        exit_trig.setShortcut('Ctrl+E')
+        file_menu.addAction(save_trig)
+        file_menu.addAction(exit_trig)
+
         view_menu = main_menu.addMenu('View')
         self.main_win = Capturer()
         self.stack = QStackedWidget(self)
@@ -36,6 +44,19 @@ class Window(QMainWindow):
         self.main_win.log_manager.action_area.stop_btn.setDisabled(False)
         self.main_win.log_manager.action_area.start_btn.clicked.connect(self.run_thread)
         self.main_win.log_manager.action_area.stop_btn.clicked.connect(self.stop_thread)
+        save_trig.triggered.connect(self.save_file)
+        exit_trig.triggered.connect(self.exit_app)
+
+    def exit_app(self):
+        self.close()
+
+    def save_file(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getSaveFileName(self, "QFileDialog.getSaveFileName()", "",
+                                                  "All Files (*);;Text Files (*.txt)", options=options)
+        if fileName:
+            print(fileName)
 
     def add_text(self):
         self.main_win.sip_container.plain_logs.appendPlainText('...\n')
