@@ -3,6 +3,8 @@ import sys
 import threading
 import time
 import traceback
+import pyshark
+
 from threading import Thread
 
 from PyQt5.QtGui import QTextCursor, QIcon
@@ -40,18 +42,19 @@ class Window(QMainWindow):
         self.setFixedWidth(640)
         self.show()
         self.thread_1 = SpecThread(target=self.add_text, )
+        self.thread_1.daemon = True
         self.created_flag = False
-        self.main_win.log_manager.action_area.stop_btn.setDisabled(False)
+        self.main_win.log_manager.action_area.stop_btn.setDisabled(True)
         self.main_win.log_manager.action_area.start_btn.clicked.connect(self.run_thread)
         self.main_win.log_manager.action_area.stop_btn.clicked.connect(self.stop_thread)
         self.main_win.log_manager.action_area.reset_btn.clicked.connect(self.reset_logs)
         save_trig.triggered.connect(self.save_file)
         exit_trig.triggered.connect(self.exit_app)
         print(sys.platform)
+        self.platform = sys.platform
+
 
     def exit_app(self):
-        #threading.
-        self.close()
         sys.exit()
 
     def save_file(self):
@@ -66,15 +69,50 @@ class Window(QMainWindow):
         self.main_win.sip_container.plain_logs.setPlainText('')
 
     def add_text(self):
-        self.main_win.sip_container.plain_logs.appendPlainText('...\n')
-        scrollbar = self.main_win.sip_container.verticalScrollBar()
-        assert  isinstance(scrollbar, QScrollBar)
-        scrollbar.setValue(scrollbar.maximum())
-        self.main_win.sip_container.plain_logs.moveCursor(QTextCursor.End)
-        time.sleep(1)
+
+        if self.platform == 'linux':
+            cap = pyshark.LiveCapture(interface='enp3s0')
+            #print(cap.sniff_continuously().)
+            if len(cap) != 0:
+                self.main_win.sip_container.plain_logs.appendPlainText('Just arrived: %s'%cap)
+                scrollbar = self.main_win.sip_container.verticalScrollBar()
+                assert  isinstance(scrollbar, QScrollBar)
+                scrollbar.setValue(scrollbar.maximum())
+                self.main_win.sip_container.plain_logs.moveCursor(QTextCursor.End)
+
+            else:
+                self.lazy_loading()
+        elif self.platform == 'win64':
+            ...
+
+
+    def lazy_loading(self):
+        previous_text = self.main_win.sip_container.plain_logs.textCursor().block().text()
+        if len(previous_text) == 12 and 'listening' in previous_text:
+            self.remove_last_line(previous_text)
+            self.main_win.sip_container.plain_logs.appendPlainText('listening')
+        elif 'listening' in previous_text:
+            self.main_win.sip_container.plain_logs.moveCursor(QTextCursor.End)
+            self.main_win.sip_container.plain_logs.insertPlainText('.')
+            self.main_win.sip_container.plain_logs.moveCursor(QTextCursor.End)
+        else:
+            self.main_win.sip_container.plain_logs.appendPlainText('listening')
+
+    def remove_last_line(self, text):
+        previous_text = self.main_win.sip_container.plain_logs.textCursor().block().text()  # type: str
+        if 'listen' in text or 'stop' in text:
+            storeCursorPos = self.main_win.sip_container.plain_logs.textCursor()
+            self.main_win.sip_container.plain_logs.moveCursor(QTextCursor.End, QTextCursor.MoveAnchor)
+            self.main_win.sip_container.plain_logs.moveCursor(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
+            self.main_win.sip_container.plain_logs.moveCursor(QTextCursor.End, QTextCursor.KeepAnchor)
+            self.main_win.sip_container.plain_logs.textCursor().removeSelectedText()
+            self.main_win.sip_container.plain_logs.textCursor().deletePreviousChar()
+            self.main_win.sip_container.plain_logs.setTextCursor(storeCursorPos)
 
     def run_thread(self):
         try:
+            previous_text = self.main_win.sip_container.plain_logs.textCursor().block().text()
+            self.remove_last_line(previous_text)
             if not self.created_flag:
                 self.thread_1.start()
                 self.created_flag = True
@@ -89,7 +127,17 @@ class Window(QMainWindow):
     def stop_thread(self):
         self.main_win.log_manager.action_area.start_btn.setDisabled(False)
         self.main_win.log_manager.action_area.stop_btn.setDisabled(True)
+        previous_text = self.main_win.sip_container.plain_logs.textCursor().block().text()
+        self.remove_last_line(previous_text)
+        self.main_win.sip_container.plain_logs.appendPlainText('stopped')
         self.thread_1.pause()
+
+    def tcp_dump(self):
+        cap = pyshark.LiveCapture(interface='enp3s0')
+        packet = cap.sniff_continuously()
+
+    def win_dump(self):
+        ...
 
 class SpecThread(Thread):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs={}, Verbose=None):
@@ -105,6 +153,7 @@ class SpecThread(Thread):
                     self.pause_cond.wait()
                 if self._target is not None:
                     self._return = self._target(*self._args, **self._kwargs)
+                    time.sleep(1)
 
     def join(self, *args):
         Thread.join(self, *args)
@@ -119,9 +168,6 @@ class SpecThread(Thread):
         self.pause_cond.notify()
         self.pause_cond.release()
 
-    def terminate(self):
-        ...
-        #self.
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)

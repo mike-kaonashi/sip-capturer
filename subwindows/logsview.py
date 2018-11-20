@@ -83,7 +83,6 @@ class SIPContainer(QScrollArea):
         self.plain_logs.setReadOnly(True)
         self.plain_logs.setStyleSheet("background-color:black;color:white;border: 2px solid #ddd;")
         self.setStyleSheet("background-color: darkgrey;outline: 1px solid slategrey;")
-        self.plain_logs.setPlainText("Hello")
         self.layout.addWidget(self.plain_logs)
 
 

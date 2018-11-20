@@ -1,13 +1,11 @@
-import subprocess as sub
+import pyshark
+import time
 
-p = sub.Popen(('sudo', 'tcpdump', '-lvv', '-B', '1024'), stdin=sub.PIPE, stdout=sub.PIPE)
-p.communicate(b'123456\n')
+cap = pyshark.LiveCapture(interface='enp3s0' , bpf_filter=None)
 
-with p.stdout:
-    for line in iter(p.stdout.readline, b''):
-        print(line)
-
-p.wait()
-
-
-
+print('Starting...')
+# cap.sniff(timeout=50)
+print('Setting timeout...')
+for packet in cap.sniff_continuously(packet_count=None):
+    print('Just arrived:', packet)
+    time.sleep(1)
